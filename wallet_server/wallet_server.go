@@ -100,22 +100,11 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 		m, _ := json.Marshal(bt)
 		buf := bytes.NewBuffer(m)
 
-		resp, err := http.Post(ws.Gateway()+"/transactions", "application/json", buf)
-		if err != nil {
-			log.Printf("ERROR: Failed to send transaction to blockchain server: %v", err)
-			io.WriteString(w, string(utils.JsonStatus("fail")))
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		resp, _ := http.Post(ws.Gateway()+"/transactions", "application/json", buf)
+		if resp.StatusCode == 201 {
 			io.WriteString(w, string(utils.JsonStatus("success")))
 			return
 		}
-
-		// Read the response body for more error details
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("ERROR: Blockchain server returned status %d: %s", resp.StatusCode, string(body))
 		io.WriteString(w, string(utils.JsonStatus("fail")))
 	default:
 		w.WriteHeader(http.StatusBadRequest)
