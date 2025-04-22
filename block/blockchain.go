@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"goblockchain/utils"
@@ -47,6 +48,18 @@ func NewBlock(nonce int, previousHash [32]byte, transactions []*Transaction) *Bl
 	b.previousHash = previousHash
 	b.transactions = transactions
 	return b
+}
+
+func (b *Block) PreviousHash() [32]byte {
+	return b.previousHash
+}
+
+func (b *Block) Nonce() int {
+	return b.nonce
+}
+
+func (b *Block) Transactions() []*Transaction {
+	return b.transactions
 }
 
 func (b *Block) Print() {
@@ -274,7 +287,6 @@ func (bc *Blockchain) Mining() bool {
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)
 	log.Println("action=mining, status=success")
-	return true
 }
 
 func (bc *Blockchain) StartMining() {
@@ -297,6 +309,25 @@ func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) float32 {
 		}
 	}
 	return totalAmount
+}
+
+func (bc *Blockchain) ValidChain(chain []*Block) bool {
+	preBlock := chain[0]
+	currentIndex := 1
+	for currentIndex < len(chain) {
+		b := chain[currentIndex]
+		if b.previousHash != preBlock.Hash() {
+			return false
+		}
+
+		if !bc.ValidProof(b.Nonce(), b.PreviousHash(), b.Transactions(), MINING_DIFFICULTY) {
+			return false
+		}
+
+		preBlock = b
+		currentIndex += 1
+	}
+	return true
 }
 
 type Transaction struct {

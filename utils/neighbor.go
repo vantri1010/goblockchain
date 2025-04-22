@@ -57,14 +57,13 @@ func FindNeighbors(myHost string, myPort uint16, startIp uint8, endIp uint8, sta
 	// Return the list of discovered neighbor addresses
 	return neighbors
 }
+
 func GetHost() string {
 	hostname, err := os.Hostname()
-	fmt.Println(hostname)
 	if err != nil {
 		return "127.0.0.1"
 	}
 	address, err := net.LookupHost(hostname)
-	fmt.Println(address)
 	if err != nil {
 		return "127.0.0.1"
 	}
