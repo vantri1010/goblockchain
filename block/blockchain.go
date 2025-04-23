@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"goblockchain/utils"
@@ -24,12 +23,12 @@ const (
 	// BLOCKCHAIN_PORT_RANGE_START defines the starting port for scanning blockchain nodes
 	BLOCKCHAIN_PORT_RANGE_START = 5000
 	// BLOCKCHAIN_PORT_RANGE_END defines the ending port for scanning blockchain nodes
-	BLOCKCHAIN_PORT_RANGE_END = 5009
+	BLOCKCHAIN_PORT_RANGE_END = 5002
 	// NEIGHBOR_IP_RANGE_START defines the starting IP offset for neighbor discovery
 	// (relative to the last octet of the current node's IP)
-	NEIGHBOR_IP_RANGE_START = 1
+	NEIGHBOR_IP_RANGE_START = 0
 	// NEIGHBOR_IP_RANGE_END defines the ending IP offset for neighbor discovery
-	NEIGHBOR_IP_RANGE_END = 254
+	NEIGHBOR_IP_RANGE_END = 0
 	// BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC defines the interval (in seconds) for syncing neighbors
 	BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC = 20
 )
@@ -287,6 +286,8 @@ func (bc *Blockchain) Mining() bool {
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)
 	log.Println("action=mining, status=success")
+
+	return true
 }
 
 func (bc *Blockchain) StartMining() {

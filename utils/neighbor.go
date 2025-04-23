@@ -61,11 +61,12 @@ func FindNeighbors(myHost string, myPort uint16, startIp uint8, endIp uint8, sta
 func GetHost() string {
 	hostname, err := os.Hostname()
 	if err != nil {
-		return "127.0.0.1"
+		// 127.0.1.1 for WSL
+		return "127.0.1.1"
 	}
 	address, err := net.LookupHost(hostname)
 	if err != nil {
-		return "127.0.0.1"
+		return "127.0.1.1"
 	}
 	return address[0]
 }
