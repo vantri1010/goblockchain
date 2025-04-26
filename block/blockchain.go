@@ -205,13 +205,15 @@ func (bc *Blockchain) UnmarshalJSON(data []byte) error {
 func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
 	b := NewBlock(nonce, previousHash, bc.transactionPool)
 	bc.chain = append(bc.chain, b)
-	bc.transactionPool = []*Transaction{}
+	//bc.transactionPool = []*Transaction{}
+	bc.ClearTransactionPool()
+
 	for _, n := range bc.neighbors {
 		endpoint := fmt.Sprintf("http://%s/transactions", n)
 		client := &http.Client{}
 		req, _ := http.NewRequest("DELETE", endpoint, nil)
 		resp, _ := client.Do(req)
-		log.Printf("%v", resp)
+		log.Printf("DELETE neighbors transactions is %v", resp.Status)
 	}
 	return b
 }
@@ -246,7 +248,7 @@ func (bc *Blockchain) CreateTransaction(sender string, recipient string, value f
 			client := &http.Client{}
 			req, _ := http.NewRequest("PUT", endpoint, buf)
 			resp, _ := client.Do(req)
-			log.Printf("%v", resp)
+			log.Printf("PUT neighbors transactions is %v", resp.Status)
 		}
 	}
 
@@ -267,7 +269,9 @@ func (bc *Blockchain) AddTransaction(sender string, recipient string, value floa
 			log.Println("ERROR: Not enough balance in a wallet")
 			return false
 		}
+		t.Print()
 		bc.transactionPool = append(bc.transactionPool, t)
+		bc.Print()
 		return true
 	} else {
 		log.Println("ERROR: Verify Transaction")
@@ -332,7 +336,7 @@ func (bc *Blockchain) Mining() bool {
 		client := &http.Client{}
 		req, _ := http.NewRequest("PUT", endpoint, nil)
 		resp, _ := client.Do(req)
-		log.Printf("%v", resp)
+		log.Printf("Consensus is %v", resp.Status)
 	}
 
 	return true

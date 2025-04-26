@@ -83,8 +83,7 @@ func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Reque
 		publicKey := utils.PublicKeyFromString(*t.SenderPublicKey)
 		signature := utils.SignatureFromString(*t.Signature)
 		bc := bcs.GetBlockchain()
-		isCreated := bc.CreateTransaction(*t.SenderBlockchainAddress,
-			*t.RecipientBlockchainAddress, *t.Value, publicKey, signature)
+		isCreated := bc.CreateTransaction(*t.SenderBlockchainAddress, *t.RecipientBlockchainAddress, *t.Value, publicKey, signature)
 
 		w.Header().Add("Content-Type", "application/json")
 		var m []byte
@@ -177,7 +176,7 @@ func (bcs *BlockchainServer) Amount(w http.ResponseWriter, req *http.Request) {
 		blockchainAddress := req.URL.Query().Get("blockchain_address")
 		amount := bcs.GetBlockchain().CalculateTotalAmount(blockchainAddress)
 
-		ar := &block.AmountResponse{amount}
+		ar := &block.AmountResponse{Amount: amount}
 		m, _ := ar.MarshalJSON()
 
 		w.Header().Add("Content-Type", "application/json")
