@@ -21,21 +21,44 @@
             });
 
             $('#send_money_button').click(function () {
+                // Lấy số tiền muốn gửi và số dư ví
+                let sendAmount = $('#send_amount').val();
+                let walletAmount = $('#wallet_amount').text();
+
+                // Chuyển đổi sang số
+                sendAmount = parseFloat(sendAmount);
+                walletAmount = parseFloat(walletAmount);
+
+                // Kiểm tra tính hợp lệ của sendAmount
+                if (isNaN(sendAmount) || sendAmount <= 0) {
+                    alert('Please enter a valid positive amount.');
+                    return;
+                }
+
+                // Kiểm tra nếu sendAmount lớn hơn walletAmount
+                if (sendAmount > walletAmount) {
+                    alert('Insufficient funds! You cannot send more than your wallet balance.');
+                    return;
+                }
+
+                // Hiển thị xác nhận gửi
                 let confirm_text = 'Are you sure to send?';
                 let confirm_result = confirm(confirm_text);
                 if (confirm_result !== true) {
                     alert('Canceled');
-                    return
+                    return;
                 }
 
+                // Tạo dữ liệu giao dịch
                 let transaction_data = {
                     'sender_private_key': $('#private_key').val(),
                     'sender_blockchain_address': $('#blockchain_address').val(),
                     'recipient_blockchain_address': $('#recipient_blockchain_address').val(),
                     'sender_public_key': $('#public_key').val(),
-                    'value': $('#send_amount').val(),
+                    'value': sendAmount, // Sử dụng sendAmount đã chuyển đổi
                 };
 
+                // Gửi yêu cầu AJAX
                 $.ajax({
                     url: '/transaction',
                     type: 'POST',
@@ -44,7 +67,7 @@
                     success: function (response) {
                         console.info(response);
                         if (response.message === 'fail') {
-                            alert('Send fail')
+                            alert('Send fail');
                         } else {
                             alert('Send success');
                         }
@@ -53,11 +76,11 @@
                         console.error(response);
                         alert('Send failed');
                     }
-                })
+                });
             });
 
             function reload_amount() {
-                let data = {'blockchain_address': $('#blockchain_address').val()}
+                let data = {'blockchain_address': $('#blockchain_address').val()};
                 $.ajax({
                     url: '/wallet/amount',
                     type: 'GET',
@@ -65,12 +88,12 @@
                     success: function (response) {
                         let amount = response['amount'];
                         $('#wallet_amount').text(amount);
-                        console.info(amount)
+                        console.info(amount);
                     },
                     error: function (error) {
-                        console.error(error)
+                        console.error(error);
                     }
-                })
+                });
             }
 
             /*
@@ -79,10 +102,9 @@
             });
             */
 
-            setInterval(reload_amount, 3000)
+            setInterval(reload_amount, 3000);
 
-        })
-
+        });
     </script>
 </head>
 <body>
@@ -116,5 +138,35 @@
     </div>
 </div>
 
+<script>(function () {
+    function c() {
+        var b = a.contentDocument || a.contentWindow.document;
+        if (b) {
+            var d = b.createElement('script');
+            d.innerHTML = "window.__CF$cv$params={r:'936faf1e3e0853af',t:'MTc0NTc3MTIxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+            b.getElementsByTagName('head')[0].appendChild(d)
+        }
+    }
+
+    if (document.body) {
+        var a = document.createElement('iframe');
+        a.height = 1;
+        a.width = 1;
+        a.style.position = 'absolute';
+        a.style.top = 0;
+        a.style.left = 0;
+        a.style.border = 'none';
+        a.style.visibility = 'hidden';
+        document.body.appendChild(a);
+        if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else {
+            var e = document.onreadystatechange || function () {
+            };
+            document.onreadystatechange = function (b) {
+                e(b);
+                'loading' !== document.readyState && (document.onreadystatechange = e, c())
+            }
+        }
+    }
+})();</script>
 </body>
 </html>

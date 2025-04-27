@@ -19,7 +19,7 @@ const (
 	MINING_DIFFICULTY = 3
 	MINING_SENDER     = "THE BLOCKCHAIN"
 	MINING_REWARD     = 1.0
-	MINING_TIMER_SEC  = 20
+	MINING_TIMER_SEC  = 40
 
 	// BLOCKCHAIN_PORT_RANGE_START defines the starting port for scanning blockchain nodes
 	BLOCKCHAIN_PORT_RANGE_START = 5000
@@ -31,7 +31,7 @@ const (
 	// NEIGHBOR_IP_RANGE_END defines the ending IP offset for neighbor discovery
 	NEIGHBOR_IP_RANGE_END = 0
 	// BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC defines the interval (in seconds) for syncing neighbors
-	BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC = 20
+	BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC = 50
 )
 
 type Block struct {
@@ -152,7 +152,7 @@ func (bc *Blockchain) SetNeighbors() {
 		BLOCKCHAIN_PORT_RANGE_START, BLOCKCHAIN_PORT_RANGE_END,
 	)
 	// Log the discovered neighbors for debugging (e.g., ["192.168.1.101:5000", "192.168.1.102:5001"])
-	log.Printf("%v", bc.neighbors)
+	//log.Printf("%v", bc.neighbors)
 }
 
 // SyncNeighbors synchronizes the neighbor list with thread safety
@@ -179,7 +179,7 @@ func (bc *Blockchain) TransactionPool() []*Transaction {
 }
 
 func (bc *Blockchain) ClearTransactionPool() {
-	bc.transactionPool = bc.transactionPool[:0]
+	bc.transactionPool = []*Transaction{} //bc.transactionPool[:0]
 }
 
 func (bc *Blockchain) MarshalJSON() ([]byte, error) {
@@ -204,8 +204,13 @@ func (bc *Blockchain) UnmarshalJSON(data []byte) error {
 
 func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
 	b := NewBlock(nonce, previousHash, bc.transactionPool)
+
+	if len(bc.TransactionPool()) == 0 {
+		log.Printf("Found transactions is zero %v", b.transactions)
+		b.Print()
+	}
+
 	bc.chain = append(bc.chain, b)
-	//bc.transactionPool = []*Transaction{}
 	bc.ClearTransactionPool()
 
 	for _, n := range bc.neighbors {
@@ -262,22 +267,17 @@ func (bc *Blockchain) AddTransaction(sender string, recipient string, value floa
 	if sender == MINING_SENDER {
 		bc.transactionPool = append(bc.transactionPool, t)
 		return true
-	}
-
-	if bc.VerifyTransactionSignature(senderPublicKey, s, t) {
-		if bc.CalculateTotalAmount(sender) < value {
-			log.Println("ERROR: Not enough balance in a wallet")
-			return false
-		}
-		t.Print()
+	} else if bc.VerifyTransactionSignature(senderPublicKey, s, t) {
+		//if bc.CalculateTotalAmount(sender) < value {
+		//	log.Println("ERROR: Not enough balance in a wallet")
+		//	return false
+		//}
 		bc.transactionPool = append(bc.transactionPool, t)
-		bc.Print()
 		return true
 	} else {
 		log.Println("ERROR: Verify Transaction")
+		return false
 	}
-	return false
-
 }
 
 func (bc *Blockchain) VerifyTransactionSignature(
