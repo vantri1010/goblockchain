@@ -137,41 +137,8 @@ func (bc *Blockchain) Chain() []*Block {
 
 func (bc *Blockchain) Run() {
 	bc.StartSyncNeighbors()
-	bc.ResolveConflicts()
+	//bc.ResolveConflicts()
 	bc.StartMining()
-}
-
-// SetNeighbors discovers and sets the list of neighbor nodes for the blockchain
-func (bc *Blockchain) SetNeighbors() {
-	// Call FindNeighbors to scan for nodes within the specified IP and port ranges
-	// utils.GetHost() retrieves the current node's IP (e.g., "192.168.1.100")
-	// bc.port is the current node's port (e.g., 5000)
-	bc.neighbors = utils.FindNeighbors(
-		utils.GetHost(), bc.port,
-		NEIGHBOR_IP_RANGE_START, NEIGHBOR_IP_RANGE_END,
-		BLOCKCHAIN_PORT_RANGE_START, BLOCKCHAIN_PORT_RANGE_END,
-	)
-	// Log the discovered neighbors for debugging (e.g., ["192.168.1.101:5000", "192.168.1.102:5001"])
-	//log.Printf("%v", bc.neighbors)
-}
-
-// SyncNeighbors synchronizes the neighbor list with thread safety
-func (bc *Blockchain) SyncNeighbors() {
-	// Lock the mutex to prevent concurrent access to the neighbors list
-	bc.muxNeighbors.Lock()
-	// Ensure the mutex is unlocked after the function completes
-	defer bc.muxNeighbors.Unlock()
-	// Update the neighbors list by calling SetNeighbors
-	bc.SetNeighbors()
-}
-
-// StartSyncNeighbors starts a periodic task to sync neighbors at regular intervals
-func (bc *Blockchain) StartSyncNeighbors() {
-	// Perform an immediate sync of neighbors
-	bc.SyncNeighbors()
-	// Schedule the next sync after BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC (20 seconds)
-	// time.AfterFunc runs StartSyncNeighbors again, creating a recursive loop
-	_ = time.AfterFunc(time.Second*BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC, bc.StartSyncNeighbors)
 }
 
 func (bc *Blockchain) TransactionPool() []*Transaction {
@@ -205,21 +172,21 @@ func (bc *Blockchain) UnmarshalJSON(data []byte) error {
 func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
 	b := NewBlock(nonce, previousHash, bc.transactionPool)
 
-	if len(bc.TransactionPool()) == 0 {
-		log.Printf("Found transactions is zero %v", b.transactions)
+	if len(bc.TransactionPool()) > 1 {
+		log.Printf("Found transactions %v", b.transactions)
 		b.Print()
 	}
 
 	bc.chain = append(bc.chain, b)
 	bc.ClearTransactionPool()
 
-	for _, n := range bc.neighbors {
-		endpoint := fmt.Sprintf("http://%s/transactions", n)
-		client := &http.Client{}
-		req, _ := http.NewRequest("DELETE", endpoint, nil)
-		resp, _ := client.Do(req)
-		log.Printf("DELETE neighbors transactions is %v", resp.Status)
-	}
+	//for _, n := range bc.neighbors {
+	//	endpoint := fmt.Sprintf("http://%s/transactions", n)
+	//	client := &http.Client{}
+	//	req, _ := http.NewRequest("DELETE", endpoint, nil)
+	//	resp, _ := client.Do(req)
+	//	log.Printf("DELETE neighbors transactions is %v", resp.Status)
+	//}
 	return b
 }
 
@@ -236,17 +203,34 @@ func (bc *Blockchain) Print() {
 	fmt.Printf("%s\n", strings.Repeat("*", 25))
 }
 
-func (bc *Blockchain) CreateTransaction(sender string, recipient string, value float32,
-	senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
-	isTransacted := bc.AddTransaction(sender, recipient, value, senderPublicKey, s)
+func (bc *Blockchain) CreateTransaction(
+	sender string,
+	recipient string,
+	value float32,
+	senderPublicKey *ecdsa.PublicKey,
+	signature *utils.Signature,
+) bool {
+	isTransacted := bc.AddVerifiedTransaction(
+		sender,
+		recipient,
+		value,
+		senderPublicKey,
+		signature,
+	)
 
 	if isTransacted {
 		for _, n := range bc.neighbors {
 			publicKeyStr := fmt.Sprintf("%064x%064x", senderPublicKey.X.Bytes(),
 				senderPublicKey.Y.Bytes())
-			signatureStr := s.String()
+			signatureStr := signature.String()
 			bt := &TransactionRequest{
-				&sender, &recipient, &publicKeyStr, &value, &signatureStr}
+				SenderBlockchainAddress:    &sender,
+				RecipientBlockchainAddress: &recipient,
+				SenderPublicKey:            &publicKeyStr,
+				Value:                      &value,
+				Signature:                  &signatureStr,
+			}
+
 			m, _ := json.Marshal(bt)
 			buf := bytes.NewBuffer(m)
 			endpoint := fmt.Sprintf("http://%s/transactions", n)
@@ -260,19 +244,21 @@ func (bc *Blockchain) CreateTransaction(sender string, recipient string, value f
 	return isTransacted
 }
 
-func (bc *Blockchain) AddTransaction(sender string, recipient string, value float32,
-	senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
-	t := NewTransaction(sender, recipient, value)
+func (bc *Blockchain) AddVerifiedTransaction(
+	sender string,
+	recipient string,
+	value float32,
+	senderPublicKey *ecdsa.PublicKey,
+	signature *utils.Signature,
+) bool {
+	transaction := NewTransaction(sender, recipient, value)
 
-	if sender == MINING_SENDER {
-		bc.transactionPool = append(bc.transactionPool, t)
-		return true
-	} else if bc.VerifyTransactionSignature(senderPublicKey, s, t) {
-		//if bc.CalculateTotalAmount(sender) < value {
-		//	log.Println("ERROR: Not enough balance in a wallet")
-		//	return false
-		//}
-		bc.transactionPool = append(bc.transactionPool, t)
+	if bc.VerifyTransactionSignature(senderPublicKey, signature, transaction) {
+		if bc.CalculateTotalAmount(sender) < value {
+			log.Println("ERROR: Not enough balance in a wallet")
+			return false
+		}
+		bc.transactionPool = append(bc.transactionPool, transaction)
 		return true
 	} else {
 		log.Println("ERROR: Verify Transaction")
@@ -280,11 +266,26 @@ func (bc *Blockchain) AddTransaction(sender string, recipient string, value floa
 	}
 }
 
+func (bc *Blockchain) AddTransaction(
+	sender string,
+	recipient string,
+	value float32,
+	senderPublicKey *ecdsa.PublicKey,
+	s *utils.Signature,
+) bool {
+	t := NewTransaction(sender, recipient, value)
+	bc.transactionPool = append(bc.transactionPool, t)
+	return true
+}
+
 func (bc *Blockchain) VerifyTransactionSignature(
-	senderPublicKey *ecdsa.PublicKey, s *utils.Signature, t *Transaction) bool {
-	m, _ := json.Marshal(t)
-	h := sha256.Sum256([]byte(m))
-	return ecdsa.Verify(senderPublicKey, h[:], s.R, s.S)
+	senderPublicKey *ecdsa.PublicKey,
+	signature *utils.Signature,
+	transaction *Transaction,
+) bool {
+	marshal, _ := json.Marshal(transaction)
+	sum256 := sha256.Sum256([]byte(marshal))
+	return ecdsa.Verify(senderPublicKey, sum256[:], signature.R, signature.S)
 }
 
 func (bc *Blockchain) CopyTransactionPool() []*Transaction {
@@ -298,9 +299,18 @@ func (bc *Blockchain) CopyTransactionPool() []*Transaction {
 	return transactions
 }
 
-func (bc *Blockchain) ValidProof(nonce int, previousHash [32]byte, transactions []*Transaction, difficulty int) bool {
+func (bc *Blockchain) ValidProof(
+	nonce int,
+	previousHash [32]byte,
+	transactions []*Transaction,
+	difficulty int,
+) bool {
 	zeros := strings.Repeat("0", difficulty)
-	guessBlock := Block{0, nonce, previousHash, transactions}
+	guessBlock := Block{
+		nonce:        nonce,
+		previousHash: previousHash,
+		transactions: transactions,
+	}
 	guessHashStr := fmt.Sprintf("%x", guessBlock.Hash())
 	return guessHashStr[:difficulty] == zeros
 }
@@ -309,9 +319,11 @@ func (bc *Blockchain) ProofOfWork() int {
 	transactions := bc.CopyTransactionPool()
 	previousHash := bc.LastBlock().Hash()
 	nonce := 0
+
 	for !bc.ValidProof(nonce, previousHash, transactions, MINING_DIFFICULTY) {
 		nonce += 1
 	}
+
 	return nonce
 }
 
@@ -325,7 +337,14 @@ func (bc *Blockchain) Mining() bool {
 		}
 	*/
 
-	bc.AddTransaction(MINING_SENDER, bc.blockchainAddress, MINING_REWARD, nil, nil)
+	bc.AddTransaction(
+		MINING_SENDER,
+		bc.blockchainAddress,
+		MINING_REWARD,
+		nil,
+		nil,
+	)
+
 	nonce := bc.ProofOfWork()
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)

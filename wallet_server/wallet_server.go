@@ -76,13 +76,13 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 
 		publicKey := utils.PublicKeyFromString(*t.SenderPublicKey)
 		privateKey := utils.PrivateKeyFromString(*t.SenderPrivateKey, publicKey)
-		value, err := strconv.ParseFloat(*t.Value, 32)
-		if err != nil {
-			log.Println("ERROR: parse error")
+
+		if t.Value == nil {
+			log.Println("ERROR: value is nil")
 			io.WriteString(w, string(utils.JsonStatus("fail")))
 			return
 		}
-		value32 := float32(value)
+		value32 := *t.Value
 
 		w.Header().Add("Content-Type", "application/json")
 
@@ -95,12 +95,18 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 			SenderBlockchainAddress:    t.SenderBlockchainAddress,
 			RecipientBlockchainAddress: t.RecipientBlockchainAddress,
 			SenderPublicKey:            t.SenderPublicKey,
-			Value:                      &value32, Signature: &signatureStr,
+			Value:                      &value32,
+			Signature:                  &signatureStr,
 		}
 		m, _ := json.Marshal(bt)
 		buf := bytes.NewBuffer(m)
 
-		resp, _ := http.Post(ws.Gateway()+"/transactions", "application/json", buf)
+		resp, err := http.Post(ws.Gateway()+"/transactions", "application/json", buf)
+		if err != nil {
+			log.Printf("ERROR: %v", err)
+			io.WriteString(w, string(utils.JsonStatus("fail")))
+			return
+		}
 		if resp.StatusCode == 201 {
 			io.WriteString(w, string(utils.JsonStatus("success")))
 			return
@@ -111,7 +117,6 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 		log.Println("ERROR: Invalid HTTP Method")
 	}
 }
-
 func (ws *WalletServer) WalletAmount(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case http.MethodGet:

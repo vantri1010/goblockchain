@@ -83,7 +83,13 @@ func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Reque
 		publicKey := utils.PublicKeyFromString(*t.SenderPublicKey)
 		signature := utils.SignatureFromString(*t.Signature)
 		bc := bcs.GetBlockchain()
-		isCreated := bc.CreateTransaction(*t.SenderBlockchainAddress, *t.RecipientBlockchainAddress, *t.Value, publicKey, signature)
+		isCreated := bc.CreateTransaction(
+			*t.SenderBlockchainAddress,
+			*t.RecipientBlockchainAddress,
+			*t.Value,
+			publicKey,
+			signature,
+		)
 
 		w.Header().Add("Content-Type", "application/json")
 		var m []byte
@@ -95,6 +101,7 @@ func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Reque
 			m = utils.JsonStatus("success")
 		}
 		io.WriteString(w, string(m))
+
 	case http.MethodPut:
 		decoder := json.NewDecoder(req.Body)
 		var t block.TransactionRequest
@@ -112,8 +119,13 @@ func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Reque
 		publicKey := utils.PublicKeyFromString(*t.SenderPublicKey)
 		signature := utils.SignatureFromString(*t.Signature)
 		bc := bcs.GetBlockchain()
-		isUpdated := bc.AddTransaction(*t.SenderBlockchainAddress,
-			*t.RecipientBlockchainAddress, *t.Value, publicKey, signature)
+		isUpdated := bc.AddTransaction(
+			*t.SenderBlockchainAddress,
+			*t.RecipientBlockchainAddress,
+			*t.Value,
+			publicKey,
+			signature,
+		)
 
 		w.Header().Add("Content-Type", "application/json")
 		var m []byte
@@ -124,10 +136,12 @@ func (bcs *BlockchainServer) Transactions(w http.ResponseWriter, req *http.Reque
 			m = utils.JsonStatus("success")
 		}
 		io.WriteString(w, string(m))
+
 	case http.MethodDelete:
 		bc := bcs.GetBlockchain()
 		bc.ClearTransactionPool()
 		io.WriteString(w, string(utils.JsonStatus("success")))
+
 	default:
 		log.Println("ERROR: Invalid HTTP Method")
 		w.WriteHeader(http.StatusBadRequest)
