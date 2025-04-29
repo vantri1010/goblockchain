@@ -33,6 +33,7 @@ func (bc *Blockchain) SyncNeighbors() {
 func (bc *Blockchain) StartSyncNeighbors() {
 	// Perform an immediate sync of neighbors
 	bc.SyncNeighbors()
+	bc.ResolveConflicts()
 	// Schedule the next sync after BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC (20 seconds)
 	// time.AfterFunc runs StartSyncNeighbors again, creating a recursive loop
 	_ = time.AfterFunc(time.Second*BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC, bc.StartSyncNeighbors)
