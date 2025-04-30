@@ -122,13 +122,6 @@ func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
 	bc.chain = append(bc.chain, b)
 	bc.ClearTransactionPool()
 
-	//for _, n := range bc.neighbors {
-	//	endpoint := fmt.Sprintf("http://%s/transactions", n)
-	//	client := &http.Client{}
-	//	req, _ := http.NewRequest("DELETE", endpoint, nil)
-	//	resp, _ := client.Do(req)
-	//	log.Printf("DELETE neighbors transactions is %v", resp.Status)
-	//}
 	return b
 }
 
@@ -218,6 +211,7 @@ func (bc *Blockchain) AddTransaction(
 	transaction := NewTransaction(sender, recipient, value)
 
 	if bc.VerifyTransactionSignature(senderPublicKey, signature, transaction) {
+		transaction.Print()
 		bc.transactionPool = append(bc.transactionPool, transaction)
 		return true
 	}
@@ -248,12 +242,15 @@ func (bc *Blockchain) VerifyTransactionSignature(
 
 func (bc *Blockchain) CopyTransactionPool() []*Transaction {
 	transactions := make([]*Transaction, 0)
+
 	for _, t := range bc.transactionPool {
-		transactions = append(transactions,
-			NewTransaction(t.senderBlockchainAddress,
-				t.recipientBlockchainAddress,
-				t.value))
+		transactions = append(transactions, NewTransaction(
+			t.senderBlockchainAddress,
+			t.recipientBlockchainAddress,
+			t.value,
+		))
 	}
+
 	return transactions
 }
 
@@ -270,6 +267,7 @@ func (bc *Blockchain) ValidProof(
 		transactions: transactions,
 	}
 	guessHashStr := fmt.Sprintf("%x", guessBlock.Hash())
+
 	return guessHashStr[:difficulty] == zeros
 }
 
@@ -299,14 +297,6 @@ func (bc *Blockchain) Mining() bool {
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)
 	log.Println("action=mining, status=success")
-
-	//for _, n := range bc.neighbors {
-	//	endpoint := fmt.Sprintf("http://%s/consensus", n)
-	//	client := &http.Client{}
-	//	req, _ := http.NewRequest("PUT", endpoint, nil)
-	//	resp, _ := client.Do(req)
-	//	log.Printf("Consensus is %v", resp.Status)
-	//}
 
 	return true
 }

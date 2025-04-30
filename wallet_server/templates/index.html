@@ -2,13 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Wallet</title>
+    <!-- jQuery CDN -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for additional refinements */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .textarea-resize-none {
+            resize: none;
+        }
+
+        .input-focus {
+            transition: all 0.2s ease;
+        }
+
+        .input-focus:focus {
+            ring: 2px;
+            ring-offset-2;
+            ring-blue-500;
+        }
+    </style>
     <script>
         $(function () {
             $.ajax({
                 url: '/wallet',
-                type: 'POST',
+                type: 'GET',
                 success: function (response) {
                     $('#public_key').val(response['public_key']);
                     $('#private_key').val(response['private_key']);
@@ -21,27 +45,21 @@
             });
 
             $('#send_money_button').click(function () {
-                // Lấy số tiền muốn gửi và số dư ví
                 let sendAmount = $('#send_amount').val();
                 let walletAmount = $('#wallet_amount').text();
-
-                // Chuyển đổi sang số
                 sendAmount = parseFloat(sendAmount);
                 walletAmount = parseFloat(walletAmount);
 
-                // Kiểm tra tính hợp lệ của sendAmount
                 if (isNaN(sendAmount) || sendAmount <= 0) {
                     alert('Please enter a valid positive amount.');
                     return;
                 }
 
-                // Kiểm tra nếu sendAmount lớn hơn walletAmount
                 if (sendAmount > walletAmount) {
                     alert('Insufficient funds! You cannot send more than your wallet balance.');
                     return;
                 }
 
-                // Hiển thị xác nhận gửi
                 let confirm_text = 'Are you sure to send?';
                 let confirm_result = confirm(confirm_text);
                 if (confirm_result !== true) {
@@ -49,16 +67,14 @@
                     return;
                 }
 
-                // Tạo dữ liệu giao dịch
                 let transaction_data = {
                     'sender_private_key': $('#private_key').val(),
                     'sender_blockchain_address': $('#blockchain_address').val(),
                     'recipient_blockchain_address': $('#recipient_blockchain_address').val(),
                     'sender_public_key': $('#public_key').val(),
-                    'value': sendAmount, // Sử dụng sendAmount đã chuyển đổi
+                    'value': sendAmount,
                 };
 
-                // Gửi yêu cầu AJAX
                 $.ajax({
                     url: '/transaction',
                     type: 'POST',
@@ -96,77 +112,94 @@
                 });
             }
 
-            /*
-            $('#reload_wallet').click(function(){
-                reload_amount();
-            });
-            */
-
             setInterval(reload_amount, 1000);
-
         });
     </script>
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<div class="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-8 md:p-12">
+    <!-- Wallet Section -->
+    <div class="mb-12">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Wallet</h1>
+        <div class="flex items-center mb-6">
+            <span class="text-lg font-medium text-gray-600 mr-2">Balance:</span>
+            <span class="text-2xl font-semibold text-blue-600" id="wallet_amount">0</span>
+        </div>
 
-<div>
-    <h1>Wallet</h1>
-    <div id="wallet_amount">0</div>
-    <!--
-    <button id="reload_wallet">Reload Wallet</button>
-    -->
+        <div class="space-y-6">
+            <!-- Public Key -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="public_key">Public Key</label>
+                <textarea
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 textarea-resize-none"
+                        id="public_key"
+                        rows="2"
+                ></textarea>
+            </div>
 
-    <p>Public Key</p>
-    <textarea cols="100" id="public_key" rows="2"></textarea>
+            <!-- Private Key -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="private_key">Private Key</label>
+                <textarea
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 textarea-resize-none"
+                        id="private_key"
+                        rows="1"
+                ></textarea>
+            </div>
 
-    <p>Private Key</p>
-    <textarea cols="100" id="private_key" rows="1"></textarea>
+            <!-- Blockchain Address -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="blockchain_address">Blockchain
+                    Address</label>
+                <textarea
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 textarea-resize-none"
+                        id="blockchain_address"
+                        rows="1"
+                ></textarea>
+            </div>
+        </div>
+    </div>
 
-    <p>Blockchain Address</p>
-    <textarea cols="100" id="blockchain_address" rows="1"></textarea>
-
-</div>
-
-<div>
-    <h1>Send Money</h1>
+    <!-- Send Money Section -->
     <div>
-        Address: <input id="recipient_blockchain_address" size="100" type="text">
-        <br>
-        Amount: <input id="send_amount" type="text">
-        <br>
-        <button id="send_money_button">Send</button>
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Send Money</h2>
+        <div class="space-y-6">
+            <!-- Recipient Address -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="recipient_blockchain_address">Recipient
+                    Address</label>
+                <input
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 input-focus"
+                        id="recipient_blockchain_address"
+                        placeholder="Enter recipient blockchain address"
+                        type="text"
+                >
+            </div>
+
+            <!-- Amount -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="send_amount">Amount</label>
+                <input
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 input-focus"
+                        id="send_amount"
+                        min="0"
+                        placeholder="Enter amount to send"
+                        step="0.01"
+                        type="number"
+                >
+            </div>
+
+            <!-- Send Button -->
+            <div>
+                <button
+                        class="w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200"
+                        id="send_money_button"
+                >
+                    Send
+                </button>
+            </div>
+        </div>
     </div>
 </div>
-
-<script>(function () {
-    function c() {
-        var b = a.contentDocument || a.contentWindow.document;
-        if (b) {
-            var d = b.createElement('script');
-            d.innerHTML = "window.__CF$cv$params={r:'936faf1e3e0853af',t:'MTc0NTc3MTIxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
-            b.getElementsByTagName('head')[0].appendChild(d)
-        }
-    }
-
-    if (document.body) {
-        var a = document.createElement('iframe');
-        a.height = 1;
-        a.width = 1;
-        a.style.position = 'absolute';
-        a.style.top = 0;
-        a.style.left = 0;
-        a.style.border = 'none';
-        a.style.visibility = 'hidden';
-        document.body.appendChild(a);
-        if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else {
-            var e = document.onreadystatechange || function () {
-            };
-            document.onreadystatechange = function (b) {
-                e(b);
-                'loading' !== document.readyState && (document.onreadystatechange = e, c())
-            }
-        }
-    }
-})();</script>
 </body>
 </html>
