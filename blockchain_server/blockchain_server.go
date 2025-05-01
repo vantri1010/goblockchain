@@ -11,7 +11,12 @@ import (
 	"strconv"
 )
 
-var cache map[string]*block.Blockchain = make(map[string]*block.Blockchain)
+type BlockchainCache struct {
+	Blockchain *block.Blockchain
+	Wallet     *wallet.Wallet
+}
+
+var cache map[string]*BlockchainCache = make(map[string]*BlockchainCache)
 
 type BlockchainServer struct {
 	port uint16
@@ -26,16 +31,43 @@ func (bcs *BlockchainServer) Port() uint16 {
 }
 
 func (bcs *BlockchainServer) GetBlockchain() *block.Blockchain {
-	bc, ok := cache["blockchain"]
+	cacheEntry, ok := cache["blockchain"]
 	if !ok {
 		minersWallet := wallet.NewWallet()
-		bc = block.NewBlockchain(minersWallet.BlockchainAddress(), bcs.Port())
-		cache["blockchain"] = bc
+		bc := block.NewBlockchain(minersWallet.BlockchainAddress(), bcs.Port())
+		cache["blockchain"] = &BlockchainCache{
+			Blockchain: bc,
+			Wallet:     minersWallet,
+		}
 		log.Printf("private_key %v", minersWallet.PrivateKeyStr())
 		log.Printf("public_key %v", minersWallet.PublicKeyStr())
 		log.Printf("blockchain_address %v", minersWallet.BlockchainAddress())
 	}
-	return bc
+	return cacheEntry.Blockchain
+}
+
+func (bcs *BlockchainServer) GetWallet(w http.ResponseWriter, req *http.Request) {
+	switch req.Method {
+	case http.MethodGet:
+		w.Header().Add("Content-Type", "application/json")
+		cacheEntry, ok := cache["blockchain"]
+		if !ok {
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, string(utils.JsonStatus("fail")))
+			return
+		}
+		m, err := cacheEntry.Wallet.MarshalJSON()
+		if err != nil {
+			log.Printf("ERROR: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, string(utils.JsonStatus("fail")))
+			return
+		}
+		io.WriteString(w, string(m[:]))
+	default:
+		log.Println("ERROR: Invalid HTTP Method")
+		w.WriteHeader(http.StatusBadRequest)
+	}
 }
 
 func (bcs *BlockchainServer) GetChain(w http.ResponseWriter, req *http.Request) {
@@ -47,7 +79,6 @@ func (bcs *BlockchainServer) GetChain(w http.ResponseWriter, req *http.Request) 
 		io.WriteString(w, string(m[:]))
 	default:
 		log.Printf("ERROR: Invalid HTTP Method")
-
 	}
 }
 
@@ -229,5 +260,6 @@ func (bcs *BlockchainServer) Run() {
 	http.HandleFunc("/mine/start", bcs.StartMine)
 	http.HandleFunc("/amount", bcs.Amount)
 	http.HandleFunc("/consensus", bcs.Consensus)
+	http.HandleFunc("/wallet", bcs.GetWallet)
 	log.Fatal(http.ListenAndServe("0.0.0.0:"+strconv.Itoa(int(bcs.Port())), nil))
 }

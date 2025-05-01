@@ -56,20 +56,41 @@ func (ws *WalletServer) Index(w http.ResponseWriter, req *http.Request) {
 
 func (ws *WalletServer) Wallet(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
-	case http.MethodGet:
+	case http.MethodGet, http.MethodPost:
 		w.Header().Add("Content-Type", "application/json")
-		myWallet := wallet.NewWallet()
-		m, err := myWallet.MarshalJSON()
+		client := &http.Client{}
+		req, err := http.NewRequest("GET", ws.Gateway()+"/wallet", nil)
 		if err != nil {
 			log.Printf("ERROR: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			io.WriteString(w, string(utils.JsonStatus("fail")))
 			return
 		}
-		_, err = io.WriteString(w, string(m[:]))
+		resp, err := client.Do(req)
 		if err != nil {
 			log.Printf("ERROR: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, string(utils.JsonStatus("fail")))
+			return
 		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("ERROR: Blockchain server returned status %d", resp.StatusCode)
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, string(utils.JsonStatus("fail")))
+			return
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("ERROR: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, string(utils.JsonStatus("fail")))
+			return
+		}
+
+		io.WriteString(w, string(body))
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		log.Println("ERROR: Invalid HTTP Method")

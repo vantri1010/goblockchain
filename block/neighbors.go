@@ -11,12 +11,13 @@ func (bc *Blockchain) SetNeighbors() {
 	// utils.GetHost() retrieves the current node's IP (e.g., "192.168.1.100")
 	// bc.port is the current node's port (e.g., 5000)
 	bc.neighbors = utils.FindNeighbors(
-		utils.GetHost(), bc.port,
-		NEIGHBOR_IP_RANGE_START, NEIGHBOR_IP_RANGE_END,
-		BLOCKCHAIN_PORT_RANGE_START, BLOCKCHAIN_PORT_RANGE_END,
+		utils.GetHost(),
+		bc.port,
+		NEIGHBOR_IP_RANGE_START,
+		NEIGHBOR_IP_RANGE_END,
+		BLOCKCHAIN_PORT_RANGE_START,
+		BLOCKCHAIN_PORT_RANGE_END,
 	)
-	// Log the discovered neighbors for debugging (e.g., ["192.168.1.101:5000", "192.168.1.102:5001"])
-	//log.Printf("%v", bc.neighbors)
 }
 
 // SyncNeighbors synchronizes the neighbor list with thread safety
