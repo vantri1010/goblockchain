@@ -231,5 +231,6 @@ func (ws *WalletServer) Run() {
 	http.HandleFunc("/wallet", ws.Wallet)
 	http.HandleFunc("/wallet/amount", ws.WalletAmount)
 	http.HandleFunc("/transaction", ws.CreateTransaction)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("wallet_server/static"))))
 	log.Fatal(http.ListenAndServe("0.0.0.0:"+strconv.Itoa(int(ws.Port())), nil))
 }

@@ -42,6 +42,8 @@ func (bcs *BlockchainServer) GetBlockchain() *block.Blockchain {
 		log.Printf("private_key %v", minersWallet.PrivateKeyStr())
 		log.Printf("public_key %v", minersWallet.PublicKeyStr())
 		log.Printf("blockchain_address %v", minersWallet.BlockchainAddress())
+
+		return bc
 	}
 	return cacheEntry.Blockchain
 }

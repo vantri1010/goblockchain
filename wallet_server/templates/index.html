@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Wallet</title>
-    <!-- jQuery CDN -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -13,108 +11,18 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-
         .textarea-resize-none {
             resize: none;
         }
-
         .input-focus {
             transition: all 0.2s ease;
         }
-
         .input-focus:focus {
             ring: 2px;
             ring-offset-2;
             ring-blue-500;
         }
     </style>
-    <script>
-        $(function () {
-            $.ajax({
-                url: '/wallet',
-                type: 'GET',
-                success: function (response) {
-                    $('#public_key').val(response['public_key']);
-                    $('#private_key').val(response['private_key']);
-                    $('#blockchain_address').val(response['blockchain_address']);
-                    console.info(response);
-                },
-                error: function (error) {
-                    console.error(error);
-                }
-            });
-
-            $('#send_money_button').click(function () {
-                let sendAmount = $('#send_amount').val();
-                let walletAmount = $('#wallet_amount').text();
-                sendAmount = parseFloat(sendAmount);
-                walletAmount = parseFloat(walletAmount);
-
-                if (isNaN(sendAmount) || sendAmount <= 0) {
-                    alert('Please enter a valid positive amount.');
-                    return;
-                }
-
-                if (sendAmount > walletAmount) {
-                    alert('Insufficient funds! You cannot send more than your wallet balance.');
-                    return;
-                }
-
-                let confirm_text = 'Are you sure to send?';
-                let confirm_result = confirm(confirm_text);
-                if (confirm_result !== true) {
-                    alert('Canceled');
-                    return;
-                }
-
-                let transaction_data = {
-                    'sender_private_key': $('#private_key').val(),
-                    'sender_blockchain_address': $('#blockchain_address').val(),
-                    'recipient_blockchain_address': $('#recipient_blockchain_address').val(),
-                    'sender_public_key': $('#public_key').val(),
-                    'value': sendAmount,
-                };
-
-                $.ajax({
-                    url: '/transaction',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(transaction_data),
-                    success: function (response) {
-                        console.info(response);
-                        if (response.message === 'fail') {
-                            alert('Send fail');
-                        } else {
-                            alert('Send success');
-                        }
-                    },
-                    error: function (response) {
-                        console.error(response);
-                        alert('Send failed');
-                    }
-                });
-            });
-
-            function reload_amount() {
-                let data = {'blockchain_address': $('#blockchain_address').val()};
-                $.ajax({
-                    url: '/wallet/amount',
-                    type: 'GET',
-                    data: data,
-                    success: function (response) {
-                        let amount = response['amount'];
-                        $('#wallet_amount').text(amount);
-                        console.info(amount);
-                    },
-                    error: function (error) {
-                        console.error(error);
-                    }
-                });
-            }
-
-            setInterval(reload_amount, 1000);
-        });
-    </script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 <div class="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-8 md:p-12">
@@ -201,5 +109,6 @@
         </div>
     </div>
 </div>
+<script src="/static/wallet.js"></script>
 </body>
 </html>
