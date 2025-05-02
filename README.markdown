@@ -80,7 +80,7 @@ go run . -port 5000
 #### Configuration:
 
 - **Port**: `5000` (default). You can change the port using the `-port` flag.
-- **Example Configurations**:
+- **Example Configurations to run concurrently**:
     - Port 5000: `go run . -port 5000`
     - Port 5001: `go run . -port 5001`
     - Port 5002: `go run . -port 5002`
@@ -89,8 +89,8 @@ go run . -port 5000
 
 - The blockchain server must be running before the wallet server, as the wallet server depends on its APIs (e.g.,
   `GET /wallet`, `GET /amount`).
-- Logs will display the miner's wallet details (`private_key`, `public_key`, `blockchain_address`) when the blockchain
-  is initialized.
+- If you use goland ide you can also run it on WSL environment. The program can also find the ips of neighboring nodes
+  on both windows and wsl environments.
 
 ### 2. Run the Wallet Server
 
@@ -108,7 +108,7 @@ go run . -port 8080 -gateway http://localhost:5000
 
 - **Port**: `8080` (default). You can change the port using the `-port` flag.
 - **Gateway**: `http://localhost:5000` (default). This should match the port of the blockchain server.
-- **Example Configurations**:
+- **Example Configurations to run concurrently**:
     - Port 8080, Gateway 5000: `go run . -port 8080 -gateway http://localhost:5000`
     - Port 8081, Gateway 5001: `go run . -port 8081 -gateway http://localhost:5001`
     - Port 8082, Gateway 5002: `go run . -port 8082 -gateway http://localhost:5002`
@@ -122,9 +122,11 @@ go run . -port 8080 -gateway http://localhost:5000
 ## Accessing the Application
 
 1. **Open the Wallet Interface**:
-    - After starting both servers, open your browser and navigate to:
+    - After starting blockchain servers (port 5000, 5001, 5002), open your browser and navigate to:
       ```
       http://localhost:8080
+      http://localhost:8081
+      http://localhost:8082
       ```
     - This will load the wallet interface (`index.html`).
 
@@ -140,12 +142,13 @@ go run . -port 8080 -gateway http://localhost:5000
     - Start 3 blockchain servers on port 5000, 5001, 5002 on WSL
     - Start the wallet server on port 8080 with gateway `http://localhost:5000`.
     - Start the wallet server on port 8081 with gateway `http://localhost:5001`.
-    - Open `http://localhost:8080` in your browser.
-    - Open `http://localhost:8081` in your browser.
-    - View your wallet details, check your balance, copy address and send a transaction to wallet server on port 8081.
+   - Open `http://localhost:8080` and `http://localhost:8081` in your browser.
+   - View your wallet details, check your balance, copy current wallet address and try to send money from another
+     wallet.
+   - You can also view transaction pool after a transaction is created and before block mining via
+     `http://localhost:<500x>/transactions`
     - You can also view transactions history including mining and deposit transactions via
       `http://localhost:<500x>/chain`
-    - You can also view transactions pool before block mining via `http://localhost:<500x>/transactions`
 
 ## Testing the Application
 
@@ -180,45 +183,32 @@ go run . -port 8080 -gateway http://localhost:5000
 ## Troubleshooting
 
 - **Wallet Details Not Loaded**:
-    - Check the blockchain server logs to ensure `GET /wallet` is being called.
+    - Check the blockchain server logs to see if the wallet information is printed out and to ensure `GET /wallet` is
+      being called.
     - Verify the blockchain server is running on the correct port (e.g., 5000) and the wallet server's gateway matches.
     - Check the browser console for JavaScript errors (`Failed to fetch`, etc.).
 
 - **Balance Not Updating**:
     - Ensure `GET /wallet/amount` requests are sent with the correct `blockchain_address`.
     - Check wallet server logs for errors in handling `GET /wallet/amount`.
+  - Check IDE console log to see if neighbor IPs are logged (found) for example :
+    `Find neighbors:  [172.16.0.2:5000 172.16.0.2:5002]`
+  - Try `http://localhost:<500x>/consensus` to update the transaction history of all nodes
 
 - **Transaction Fails**:
     - Verify the `recipient_blockchain_address` and `send_amount` are valid.
     - Check the browser console and server logs for errors in `POST /transaction`.
-
-- **Static File (`wallet.js`) Not Found**:
-    - Ensure `wallet.js` is in `wallet_server/static/`.
-    - Confirm `wallet_server.go` has the line:
-      ```go
-      http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("wallet_server/static"))))
-      ```
-    - Check `http://localhost:8080/static/wallet.js` in the browser (should return the file content).
 
 ## Additional Notes
 
 - **Technology Stack**:
     - Backend: Go (net/http for servers, custom blockchain implementation).
     - Frontend: HTML with Tailwind CSS for styling, vanilla JavaScript (`wallet.js`) for interactivity.
-    - No external JavaScript libraries (e.g., jQuery) are used; all logic is implemented in vanilla JavaScript with the
-      Fetch API.
 
 - **Scalability**:
     - The blockchain server supports consensus (`/consensus` endpoint) for distributed nodes.
     - To scale, run multiple blockchain servers on different ports (e.g., 5000, 5001, 5002) and wallet servers with
       corresponding gateways.
-
-- **Future Improvements**:
-    - Add input validation in `wallet.js` for the transaction form.
-    - Implement error messages directly in the UI instead of using `alert()`.
-    - Add a loading spinner for AJAX requests.
-    - Secure the `/templates/` endpoint to prevent direct access to `index.html` if served as a static file.
-
 ## License
 
 This project is for educational purposes. Feel free to modify and distribute as needed.
